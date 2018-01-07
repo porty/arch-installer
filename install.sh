@@ -15,47 +15,45 @@ fail() {
     exit 1
 }
 
-check_is_block_device() {
-    local device="$1"
-    if [ ! -b "$device" ] ; then
-        fail "'${device}' either doesn't exist or isn't a block device"
-    fi    
-}
-
-check_device_is_not_mounted() {
-    local device="$1"
-    if [ "$(mount | grep -c ${device})" -ne 0 ] ; then
-        fail "Device '${device}' looks mounted to me"
-    fi
-}
-
 check_running_as_root() {
     if [ "$(whoami)" != "root" ]; then
         fail This must be run as root
     fi
 }
 
+cproot() {
+    cp -p "$1" "$2"
+    chown root:root "$2"
+}
+
+check_running_as_root
 
 if [ $# -ne 1 ]; then
-    echo You must specify the block device to use
+    echo You must specify the directory to install stuff to
     exit 1
 fi
 
-DEVICE="$1"
+ROOT="$1"
 
-# https://wiki.archlinux.org/index.php/Installation_guide
+set -x
 
-#check_running_as_root
-#check_is_block_device "$DEVICE"
-check_device_is_not_mounted "$DEVICE"
-#fdisk -l "$DEVICE"
-confirm "This will remove all the shit on ${DEVICE}, are you sure?" || fail "Aborted"
+pacstrap -d "$ROOT" base sudo samba screen btrfs-progs htop docker zstd lm_sensors lsof openssh pv rsync unrar grub
+cproot config/fstab "$ROOT"/etc/fstab
+cproot config/smb.conf "$ROOT"/etc/samba/
+cproot config/sudo-group.conf "$ROOT"/etc/sudoers.d/
+cproot config/mirrorlist "$ROOT"/etc/
+cproot config/screenrc "$ROOT"/etc/
+cproot config/locale.gen "$ROOT"/etc/
+cproot config/locale.conf "$ROOT"/etc/
+cproot config/dhcp-wired.network "$ROOT"/etc/systemd/network/
 
-newdisk="label: dos
-device: ${DEVICE}
-unit: sectors
+echo nas1 > "$ROOT"/etc/hostname
+echo "127.0.1.1       nas1" >> "$ROOT"/etc/hosts
 
-${DEVICE}1 : start=        2048, size=     2097152, type=83
-${DEVICE}2 : start=     2099200, type=83"
+cproot install-in-chroot.sh "$ROOT"/
+arch-chroot "$ROOT" /install-in-chroot.sh
+rm "$ROOT"/install-in-chroot.sh
 
-echo "$newdisk" > sfdisk "$DEVICE" 
+set +x
+
+echo "OK, to copy to device use cp -p -R $ROOT path/to/device"

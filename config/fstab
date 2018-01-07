@@ -1,0 +1,12 @@
+# 
+# /etc/fstab: static file system information
+#
+# <file system>	<dir>	<type>	<options>	<dump>	<pass>
+# /dev/sdf2 UUID=bddc4273-76f5-45ae-bf2a-71b3a97261c4
+LABEL=rooty         	/         	ext4      	rw,noatime,data=ordered	0 1
+
+# /dev/sdf1 UUID=cfd051eb-3985-4e4b-9e5b-b3b7a7c4a0fc
+LABEL=booty         	/boot     	ext4      	rw,noatime,data=ordered	0 2
+
+/dev/sda1 		/mnt/raid	btrfs		rw,noatime,space_cache,subvolid=5,subvol=/ 0 0
+
